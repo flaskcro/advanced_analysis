@@ -1,0 +1,174 @@
+---
+title: "Cracking Iris Data "
+output: html_notebook
+---
+
+## 0. Preprocessing Data
+```{r}
+str(iris)
+```
+
+### Add column to divide test and train data
+```{r}
+set.seed(19731027)
+iris$dv = FALSE
+iris[sort(sample(nrow(iris), nrow(iris[,])*.8, replace=FALSE)),'dv'] = TRUE
+head(iris)
+```
+
+### Split Train and Test data
+```{r}
+iris.train <- iris[iris$dv==TRUE,-6]
+iris.test <- iris[iris$dv==FALSE,-6]
+nrow(iris.train)
+nrow(iris.test)
+```
+
+## 1. Multinominal Regression Analysis
+
+### Make Multinomial Model
+```{r}
+library(nnet)
+regression.model <- multinom(Species~.,data=iris.train)
+rg.predicted <- predict(regression.model,iris.test)
+```
+
+### Make Confusion Matrix
+```{r}
+table(rg.predicted, iris.test$Species)
+```
+
+### Calculate Accuracy with Test Data
+```{r}
+sum(rg.predicted == iris.test$Species)/nrow(iris.test)
+```
+
+## 2.Decision Tree
+
+### Make Decion Tree Model
+```{r}
+library(rpart)
+dt.model <- rpart(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, data=iris.train, method = "class")
+dt.predicted <- predict(dt.model,iris.test,type="class")
+```
+
+### Make Confusion Matrix
+```{r}
+table(dt.predicted, iris.test$Species)
+```
+
+### Calculate Accuracy with Test Data
+```{r}
+sum(dt.predicted == iris.test$Species)/nrow(iris.test)
+```
+
+### Plot the Decion Tree
+
+#### load mandatory library
+```{r, results=FALSE}
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+```
+
+```{r}
+fancyRpartPlot(dt.model)
+```
+
+## 3.KNN
+
+### Make train, test data for knn and train label
+```{r}
+library(class)
+iris.train.label <- iris.train$Species
+iris.knn.train <- iris.train[,-5]
+iris.knn.test <- iris.test[,-5]
+```
+
+### Make Model
+```{r}
+knn.predicted <- knn(train = iris.knn.train, test = iris.knn.test, cl = iris.train.label, k = 3)
+```
+
+### Make Confusion Matrix
+```{r}
+table(knn.predicted, iris.test$Species)
+```
+
+### Calculate Accuracy with Test Data
+```{r}
+sum(knn.predicted == iris.test$Species)/nrow(iris.test)
+```
+
+## 4.Deep Learning with H2o
+
+### Load H2o library
+```{r, results=FALSE}
+library(h2o)
+```
+
+### initialize h2o instance
+```{r}
+localH2O <- h2o.init(ip = 'localhost', port = 54321, max_mem_size = '4g')
+```
+
+### Transfer Iris dataframe to H2o instance 
+```{r}
+iris.h2o.train <- as.h2o(iris.train, destination_frame = "iris.h2o.train")
+iris.h2o.test <- as.h2o(iris.test, destination_frame = "iris.h2o.test")
+nrow(iris.h2o.train)
+nrow(iris.h2o.test)
+```
+
+
+### Make Gradient Boosted Model
+```{r}
+model.h2o <- h2o.deeplearning(x=1:4, y=5, training_frame = iris.h2o.train)
+h2o.predicted <- h2o.predict(model.h2o, iris.h2o.test)[,"predict"]
+```
+
+### Make Confusion Matrix
+```{r}
+table(as.vector(h2o.predicted), as.vector(iris.h2o.test$Species))
+```
+
+### Calculate Accuracy with Test Data
+```{r}
+sum(as.vector(h2o.predicted) ==  as.vector(iris.h2o.test$Species)) / length(as.vector(iris.h2o.test$Species))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
